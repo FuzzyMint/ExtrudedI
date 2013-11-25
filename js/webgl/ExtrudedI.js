@@ -27,9 +27,9 @@ var ExtrudedI = {
                        2, 9, 8,
                        2, 3, 8,
                      ],
-    colors          : [	1, 1, 0 ,1,	  1, 1, 0 ,1,	0, 1 ,0 ,1,	 0, 1 ,0 ,1,  0, 0, 1 ,1,	 0, 0, 1 ,1, 1, 1, 0 ,1,      1, 1, 0 ,1,   0, 1 ,0 ,1,  0, 1 ,0 ,1,  0, 0, 1 ,1,    0, 0, 1 ,1	],
+    diffuse         : [0.0, 0.5, 0.5, 1.0],
     wireframe       : false,
-    perVertexColor  : true,
+    perVertexColor  : false,
     build           : function(){
                         var v = [];
                         var i = [];
@@ -68,13 +68,23 @@ var ExtrudedI = {
                             indexCount += 12;
                         }
 
+                        //Connect the top and bottom
+                        topAndBottomFaceIndices = [0,11,12,11,12,23];
+                        
+
                         console.log('Original:   ' + ExtrudedI.indices);
                         console.log('Connecting: ' + connectingIndices);
                         //console.log(i);
 
                      
                         ExtrudedI.vertices = ExtrudedI.vertices.concat(v);
-                        ExtrudedI.indices = ExtrudedI.indices.concat(i).concat(connectingIndices);
+
+                        for(var l=0; l<ExtrudedI.vertices.length; l+=3){
+                            ExtrudedI.vertices[l+1] += 1.0
+                            ExtrudedI.vertices[l+2] -= 0.25;
+                        }
+
+                        ExtrudedI.indices = ExtrudedI.indices.concat(i).concat(connectingIndices).concat(topAndBottomFaceIndices);
 
 
                         //ExtrudedI.vertices = v;

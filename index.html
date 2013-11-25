@@ -27,7 +27,6 @@ attribute vec4 aVertexColor;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
 uniform mat4 uNMatrix;
-uniform bool uUpdateLight;
 uniform vec3 uLightPosition; 
 uniform vec4 uLightAmbient;  
 uniform vec4 uLightDiffuse;  
@@ -50,9 +49,7 @@ void main(void) {
     else{
         vec3 N = vec3(uNMatrix * vec4(aVertexNormal, 0.0));  // This is a vector w = 0;
         vec3 L = normalize(-uLightPosition);                 // Given a light position, use the inverse is the direction (to the center of the world)
-        if(uUpdateLight){
-            L = vec3(uNMatrix*vec4(L,0.0));   // vector light direction
-        }
+        
         
         float lambertTerm = dot(N,-L);
         if (lambertTerm == 0.0) lambertTerm = 0.01;
@@ -160,71 +157,54 @@ function setMatrixUniforms(){
 function load(){
     Floor.build(50,2);
     Axis.build(60);
-   // ExtrudedI.build();
+    ExtrudedI.build();
 
     Scene.addObject(Floor);
     Scene.addObject(Axis);
-    Scene.addObject(Triangle);
+    Scene.addObject(ExtrudedI);
 }
 
 
 /**
-* Main rendering function. Called every 500ms according to WebGLStart function (see below)
+* invoked on every rendering cycle
 */
 function draw() {
     gl.viewport(0, 0, c_width, c_height);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);    
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        
     try{
         
-        updateTransforms();
-        setMatrixUniforms();   
-        
-        // Code for drawing the mesh plane and the axis
+        updateTransforms();   
+        setMatrixUniforms(); 
+                
         for (var i = 0; i < Scene.objects.length; i++){
-                       
+            
             var object = Scene.objects[i];
-
-            if(object.alias == 'teapot') {
-                //console.log('drawing teapot')
-                //mat4.identity(mvMatrix);
-                object.diffuse = [1.0,1.0,1.0,1.0];
-                mat4.translate(mvMatrix, [0.0, 1.5, 0.0]);
-
-                gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, teapotTexture);
-                gl.uniform1i(prg.uSampler, 0);
-
-                gl.activeTexture(gl.TEXTURE1);
-                gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeTexture);
-                gl.uniform1i(prg.uCubeSampler, 1);
-
-                setMatrixUniforms();
-            }
-
-            if(object.alias == 'ExtrudedI') {
-                object.diffuse = [0.0,1.0,1.0,1.0];
-            }
-
+            
             //Setting uniforms
             gl.uniform4fv(prg.uMaterialDiffuse, object.diffuse);
             gl.uniform1i(prg.uWireframe,object.wireframe);
             gl.uniform1i(prg.uPerVertexColor, object.perVertexColor);
             
-            //Setting attributes        
-            gl.enableVertexAttribArray(prg.aVertexPosition);    
+            //Setting attributes
+            gl.enableVertexAttribArray(prg.aVertexPosition);
+            gl.disableVertexAttribArray(prg.aVertexNormal);
+            gl.disableVertexAttribArray(prg.aVertexColor);
+            
             gl.bindBuffer(gl.ARRAY_BUFFER, object.vbo);
             gl.vertexAttribPointer(prg.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(prg.aVertexPosition);
             
             if(!object.wireframe){
-                gl.enableVertexAttribArray(prg.aVertexNormal);
                 gl.bindBuffer(gl.ARRAY_BUFFER, object.nbo);
-                gl.vertexAttribPointer(prg.aVertexNormal,3,gl.FLOAT, false, 0,0);
+                gl.vertexAttribPointer(prg.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(prg.aVertexNormal);
             }
             
             if (object.perVertexColor){
-                gl.enableVertexAttribArray(prg.aVertexPosition);    
-                gl.bindBuffer(gl.ARRAY_BUFFER, object.vbo);
-                gl.vertexAttribPointer(prg.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+                gl.bindBuffer(gl.ARRAY_BUFFER, object.cbo);
+                gl.vertexAttribPointer(prg.aVertexColor,4,gl.FLOAT, false, 0,0);
+                gl.enableVertexAttribArray(prg.aVertexColor);
             }
             
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, object.ibo);

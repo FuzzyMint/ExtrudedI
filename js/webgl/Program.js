@@ -63,30 +63,20 @@ var Program = {
      prg.aVertexColor     = gl.getAttribLocation(prg, "aVertexColor");
      
      prg.uPMatrix         = gl.getUniformLocation(prg, "uPMatrix");
-     prg.uMVMatrix        = gl.getUniformLocation(prg, 'uMVMatrix');
-     prg.uNMatrix           = gl.getUniformLocation(prg, "uNMatrix");
+     prg.uMVMatrix        = gl.getUniformLocation(prg, "uMVMatrix");
+     prg.uNMatrix         = gl.getUniformLocation(prg, "uNMatrix");
+     
+     prg.uMaterialDiffuse  = gl.getUniformLocation(prg, "uMaterialDiffuse");
+     prg.uLightAmbient     = gl.getUniformLocation(prg, "uLightAmbient");
+     prg.uLightDiffuse     = gl.getUniformLocation(prg, "uLightDiffuse");
+     prg.uLightPosition    = gl.getUniformLocation(prg, "uLightPosition");
+     prg.uUpdateLight      = gl.getUniformLocation(prg, "uUpdateLight");
+     prg.uWireframe        = gl.getUniformLocation(prg, "uWireframe");
+     prg.uPerVertexColor   = gl.getUniformLocation(prg, "uPerVertexColor");
 
-    prg.uSampler = gl.getUniformLocation(prg, "uSampler");
-    prg.uCubeSampler = gl.getUniformLocation(prg, "uCubeSampler");
 
-    prg.uMaterialAmbient   = gl.getUniformLocation(prg, "uMaterialAmbient"); 
-    prg.uMaterialSpecular  = gl.getUniformLocation(prg, "uMaterialSpecular");
-    prg.uShininess          = gl.getUniformLocation(prg, "uShininess");
-    prg.uMaterialDiffuse  = gl.getUniformLocation(prg, "uMaterialDiffuse");
-
-    prg.uLightPosition      = gl.getUniformLocation(prg, "uLightPosition");
-    prg.uLightDiffuse     = gl.getUniformLocation(prg, "uLightDiffuse");
-    prg.uLightSpecular     = gl.getUniformLocation(prg, "uLightSpecular");
-    prg.uLightAmbient      = gl.getUniformLocation(prg, "uLightAmbient");
-
-    gl.uniform3fv(prg.uLightPosition,[4.5,3.0,15.0]);        
-    gl.uniform4fv(prg.uLightAmbient, [0.7,0.7,0.7,1.0]);
-    gl.uniform4fv(prg.uLightDiffuse,  [1.0,1.0,1.0,1.0]); 
-    gl.uniform4fv(prg.uLightSpecular,  [1.0,1.0,1.0,1.0]);
-    gl.uniform4fv(prg.uMaterialAmbient, [1.0,1.0,1.0,1.0]); 
-    gl.uniform4fv(prg.uMaterialDiffuse, [0.5,0.8,0.1,1.0]);
-    gl.uniform4fv(prg.uMaterialSpecular,[1.0,1.0,1.0,1.0]);
-    gl.uniform1f(prg.uShininess, 200.0);
-
+     gl.uniform3fv(prg.uLightPosition,    [20, 20, 20]);
+     gl.uniform4fv(prg.uLightAmbient,      [0.20,0.20,0.20,1.0]);
+     gl.uniform4fv(prg.uLightDiffuse,      [1.0,1.0,1.0,1.0]); 
     }
 }
