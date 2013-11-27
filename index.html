@@ -16,6 +16,9 @@
 <script type='text/javascript' src='js/webgl/Axis.js'></script>
 <script type='text/javascript' src='js/webgl/ExtrudedI.js'></script>
 <script type='text/javascript' src='js/webgl/Triangle.js'></script>
+<script type='text/javascript' src='js/webgl/Cube.js'></script>
+<script type='text/javascript' src='js/webgl/Mesh.js'></script>
+
 
 <script type='text/javascript' src='js/webgl/Floor.js'></script>
 <script type='text/javascript' src='js/webgl/WebGLApp.js'></script>
@@ -49,7 +52,7 @@ void main(void) {
     else{
         vec3 N = vec3(uNMatrix * vec4(aVertexNormal, 0.0));  // This is a vector w = 0;
         vec3 L = normalize(-uLightPosition);                 // Given a light position, use the inverse is the direction (to the center of the world)
-        
+        L = vec3(uNMatrix*vec4(L,0.0));
         
         float lambertTerm = dot(N,-L);
         if (lambertTerm == 0.0) lambertTerm = 0.01;
@@ -157,11 +160,14 @@ function setMatrixUniforms(){
 function load(){
     Floor.build(50,2);
     Axis.build(60);
-    ExtrudedI.build();
+
+    var mesh = new Mesh();
+    mesh.buildMesh(Cube.vertices,Cube.indices);
+    mesh.catmull();
 
     Scene.addObject(Floor);
     Scene.addObject(Axis);
-    Scene.addObject(ExtrudedI);
+    Scene.addObject(Cube);
 }
 
 

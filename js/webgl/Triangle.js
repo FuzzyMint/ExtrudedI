@@ -1,5 +1,5 @@
 var Triangle = {
-    alias           : 'axis',
+    alias           : 'tri',
     dim             : 5,
     vertices        : [1,0.0,0.0, 0.0,1,0.0, 0.0,0.0,1],
     indices         : [0,1,2],
