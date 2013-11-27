@@ -17,6 +17,8 @@
 <script type='text/javascript' src='js/webgl/ExtrudedI.js'></script>
 <script type='text/javascript' src='js/webgl/Triangle.js'></script>
 <script type='text/javascript' src='js/webgl/Cube.js'></script>
+<script type='text/javascript' src='js/webgl/Square.js'></script>
+
 <script type='text/javascript' src='js/webgl/Mesh.js'></script>
 
 
@@ -160,14 +162,15 @@ function setMatrixUniforms(){
 function load(){
     Floor.build(50,2);
     Axis.build(60);
+    ExtrudedI.build();
 
     var mesh = new Mesh();
-    mesh.buildMesh(Cube.vertices,Cube.indices);
-    mesh.catmull();
+    mesh.buildMesh(ExtrudedI.vertices,ExtrudedI.indices);
 
     Scene.addObject(Floor);
     Scene.addObject(Axis);
-    Scene.addObject(Cube);
+    Scene.addObject(mesh.getObjectFromMesh());
+    //Scene.addObject(Cube);
 }
 
 

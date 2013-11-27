@@ -5,14 +5,16 @@ function Mesh() {
     "use strict";
 
     this.faces = [];
+    this.originalVertices = [];
 }
 
-function HE_vert(x,y,z) {
+function HE_vert(x, y, z, index) {
     "use strict";
 
     this.x = x;
     this.y = y;
     this.z = z;
+    this.index = index;
 
     this.edge = null; // one of the half-edges which uses the vertex as its starting point
 }
@@ -40,19 +42,20 @@ function HE_face() {
 Mesh.prototype.buildMesh = function(vertices,indices) {
     console.log('Mesh vertices' + vertices);
     console.log('Mesh indices' + indices);
-
-    var he_verts = [];
-    var he_edges = [];
-
+    this.originalVertices = vertices;
     var edge_indices_map = {};
+    var he_verts = [];
+
     // Parse vertices
+    var index = 0;
     for (var i = 0; i < vertices.length; i+=3) {
-        he_verts.push(new HE_vert(vertices[i], vertices[i+1], vertices[i+2]));
+        he_verts.push(new HE_vert(vertices[i], vertices[i+1], vertices[i+2],index));
+        index++;
     };
 
-    var numEdgesInFace = 3;
+    var numEdgesInFace = 4;
     // Parse edges and faces
-    for (var i = 0; i < he_verts.length; i+=numEdgesInFace) {
+    for (var i = 0; i < indices.length; i+=numEdgesInFace) {
 
         var faceForEdges = new HE_face();
         var faceEdges = [];
@@ -89,37 +92,60 @@ Mesh.prototype.buildMesh = function(vertices,indices) {
         faceForEdges.edge = faceEdges[0];
         this.faces.push(faceForEdges);
     };
+
+    //console.log(this.faces);
 };
 
 /*
 * Deserializes mesh back into an object that can be added to the scene
+* Also converts all the quads into triangles
 */
 Mesh.prototype.getObjectFromMesh = function(){
-    /*var newObject = {}
-    newObject.vertices
-    var Triangle = {
-    alias           : 'tri',
-    dim             : 5,
-    vertices        : [1,0.0,0.0, 0.0,1,0.0, 0.0,0.0,1],
-    indices         : [0,1,2],
+    var newObject = {
+    alias           : 'mesh',
+    vertices        : this.originalVertices,
+    indices         : [],
     diffuse         : [0.0, 0.5, 0.5, 1.0],
     wireframe       : false,
-    perVertexColor  : false,
-    build           : function(d){
-                        if (d) Triangle.dim = d;
-                        Triangle.vertices = [d,0.0,0.0, 0.0,d,0.0, 0.0,0.0,d];
-                      }*/
+    perVertexColor  : false
+    };
+
+    for (var i = 0; i < this.faces.length; i++) {
+        var face = this.faces[i];
+        var verts = this.getVerticesFromFace(face);
+        var triangleIndices = this.getTriangleIndicesFromQuadVerts(verts);
+        newObject.indices = newObject.indices.concat(triangleIndices);
+    };
+
+    return newObject;
+};
+
+Mesh.prototype.getTriangleIndicesFromQuadVerts = function(verts) {
+
+    if (!verts.length == 4) {
+        throw "Quad not sent in Assertion failed";
+    }
+
+    var triangleOne = [verts[0].index,verts[1].index,verts[2].index];
+    var triangleTwo = [verts[0].index,verts[2].index,verts[3].index];
+    return triangleOne.concat(triangleTwo);
 };
 
 Mesh.prototype.facePoint = function(face) {
+    var verts = this.getVerticesFromFace(face);
+    
+    return sumVerts(verts, true);
+};
+
+Mesh.prototype.getVerticesFromFace = function(face) {
     var verts = [];
     var edge = face.edge;
     do {
         verts.push(edge.endVertex);
         edge = edge.nextEdge;
     } while(edge != face.edge);
-    
-    return sumVerts(verts, true);
+
+    return verts;
 };
 
 // Warning: assumes 2 faces are avail
@@ -155,6 +181,8 @@ Mesh.prototype.facesFromVertex = function(vertex) {
         while(edge.nextEdge != faceEdge) {
             edge = edge.nextEdge;
         }
+
+        if(edge.oppositeEdge == null) //Corner edge
         edge = edge.oppositeEdge;
     } while(edge != vertex.edge);
     
@@ -183,8 +211,9 @@ function sumVerts(vertArray, averageFlag) {
 
 
 Mesh.prototype.catmull = function() {
-    this.facePoint(this.faces[0]);
-    this.edgePoint(this.faces[0].edge.nextEdge.nextEdge);
-    console.log(this.facesFromVertex(this.faces[0].edge.endVertex));
+    //this.facePoint(this.faces[0]);
+    //this.edgePoint(this.faces[0].edge.nextEdge.nextEdge);
+    this.getObjectFromMesh();
+    //console.log(this.facesFromVertex(this.faces[0].edge.endVertex));
     
 };
