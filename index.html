@@ -166,10 +166,16 @@ function load(){
 
     var mesh = new Mesh();
     mesh.buildMesh(ExtrudedI.vertices,ExtrudedI.indices);
+    var newMesh = mesh;
+    //var newMesh = mesh.catmull();
+    //newMesh = newMesh.catmull();
+    //newMesh = newMesh.catmull();
+   
+
 
     Scene.addObject(Floor);
     Scene.addObject(Axis);
-    Scene.addObject(mesh.getObjectFromMesh());
+    Scene.addObject(newMesh.getObjectFromMesh());
     //Scene.addObject(Cube);
 }
 
