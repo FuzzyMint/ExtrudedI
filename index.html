@@ -126,11 +126,19 @@ function initTransforms(){
     gl.uniformMatrix4fv(prg.uMVMatrix, false, mvMatrix); 
 }
 
+var eyePosition = [0.0, 2.0, -7.0];
+var upVector = [0.0,1.0,0.0];
+var lookAtPosition = [0,0.5,0];
+var cubicBezierPoints = [[-7.0, 3.0, 0.0],[-3.0, 6.0, -5.0],[3.0, 6.0, -5.0],[7.0, 3.0, 0.0]];
+var t = 0;
 function updateTransforms() {
     
     mat4.identity(mvMatrix);
 
-    mat4.translate(mvMatrix, [-0.0, -0.5, -6.0]);
+    var x = calcBezierPosition(0,0);
+    var y = calcBezierPosition(1,0);
+    var z = calcBezierPosition(2,0);
+    mat4.lookAt([x,y,z], lookAtPosition, upVector,  mvMatrix);
     
     // Rotate about world's y axis
     mat4.rotateX(mvMatrix, elevation/100);
@@ -144,7 +152,15 @@ function updateTransforms() {
     mat4.transpose(nMatrix);
 
     gl.uniformMatrix4fv(prg.uMVMatrix, false, mvMatrix);
- }
+}
+
+function calcBezierPosition(dim) {
+    var pts = cubicBezierPoints;
+    return pts[0][dim] + 
+    3*t*(pts[1][dim]-pts[0][dim]) + 
+    3*Math.pow(t,2)*(pts[0][dim] + pts[2][dim] - 2*pts[1][dim]) + 
+    Math.pow(t,3)*(pts[3][dim] - pts[0][dim] + 3*pts[1][dim] - 3*pts[2][dim]);
+}
 
 
 /**
@@ -240,12 +256,21 @@ var rollVelocity = 0;
 var pitchVelocity = 0;
 var elevation = 0;
 var rotation = 0;
+var step = 0.005;
 function animate(){
 
     // Update rotation and pitch from keypress
     //rotation += 0.5;
     rotation += rollVelocity*4;
     elevation += pitchVelocity*4;
+    t += step;
+    if(t > 1.0) {
+        t = 1.0;
+        step = -step; 
+    } else if(t < 0.0) {
+        t = 0.0;
+        step = -step; 
+    }
   
     draw();
 
@@ -311,7 +336,7 @@ function runWebGLApp() {
 </head>
 
 <body onLoad='runWebGLApp()'>
-<h1>MP3 Teapot - Yusuf Sobh</h1>
+<h1>MP4 Catmull-Clark Subdivision - Yusuf Sobh</h1>
 <canvas id='canvas-element-id' width='720' height='540'>
     Your browser does not support the HTML5 canvas element.
 </canvas>
