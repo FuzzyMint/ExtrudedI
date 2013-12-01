@@ -98,6 +98,7 @@ var cubeTexture = null;
 
 var c_width = 720;
 var c_height = 540;
+var numOfCatmullSubdivisions = 0;
 
 /**
 *  Sets up the canvas
@@ -167,19 +168,9 @@ function load(){
 
     var mesh = new Mesh();
     mesh.buildMesh(ExtrudedI.vertices,ExtrudedI.indices);
-    //mesh.buildMesh(Cube.vertices,Cube.indices);
-
-    mesh = mesh.catmull();
-    //mesh = mesh.catmull();
-    //mesh = mesh.catmull();
-    //mesh = mesh.catmull();
-  
-
-
     Scene.addObject(Floor);
     Scene.addObject(Axis);
-    Scene.addObject(mesh.getObjectFromMesh());
-    //Scene.addObject(Cube);
+    Scene.addObject(mesh.getObjectFromMesh());   
 }
 
 
@@ -266,11 +257,7 @@ function animate(){
 
 function keydown(ev) {
     var keyCode = ev.keyCode;
-    if (keyCode == 87){
-        pitchVelocity = 0.5;
-    } else if (keyCode == 83){
-        pitchVelocity = -0.5;
-    } else if (keyCode == 65){
+    if (keyCode == 65){
         rollVelocity = 0.5;
     } else if (keyCode == 68){
         rollVelocity = -0.5;
@@ -279,11 +266,29 @@ function keydown(ev) {
 
 function keyup(ev) {
     var keyCode = ev.keyCode;
-    if (keyCode == 87 || keyCode == 83){
-        pitchVelocity = 0.0;
+    if (keyCode == 87) {
+        numOfCatmullSubdivisions++;
+        runCatmull();
+    } else if (keyCode == 83) {
+        numOfCatmullSubdivisions--;
+        runCatmull();
     } else if (keyCode == 65 || keyCode == 68){
         rollVelocity = 0.0;
     }  
+}
+
+function runCatmull() {
+    var mesh = new Mesh();
+    mesh.buildMesh(ExtrudedI.vertices,ExtrudedI.indices);
+
+    for (var i = 0; i < numOfCatmullSubdivisions; i++) {
+        mesh = mesh.catmull();
+    };
+
+    Scene.objects = [];
+    Scene.addObject(Floor);
+    Scene.addObject(Axis);
+    Scene.addObject(mesh.getObjectFromMesh());
 }
 
 
@@ -313,7 +318,8 @@ function runWebGLApp() {
 
 <p>
       Keys:<br> 
-      W or S = Pitch <br>
+      W = Increase number of subdivisions <br>
+      S = Decrease number of subdivisions <br>
       A or D = Roll <br>
 </p>
 
