@@ -16,12 +16,17 @@ function HE_vert(x, y, z, index) {
     this.y = y;
     this.z = z;
     this.index = index;
-    
+    this.vertexPoint = null;
+
     this.edges = [];
     this.faces = [];
 
     this.isHoleVertex = function() {
         return this.edges.length != this.faces.length;
+    }
+
+    this.print = function() {
+        console.log("(" + x + ', ' + y + ', ' + z + ')');
     }
 }
 
@@ -31,6 +36,8 @@ function HE_edge(beginVertex, endVertex) {
     this.beginVertex = beginVertex;
     this.endVertex = endVertex;
     this.faces = [];
+    this.edgePoint = null;
+
     this.isHoleEdge = function() {
         return this.faces.length == 1;
     }
@@ -41,6 +48,7 @@ function HE_face() {
 
     this.vertices = [];
     this.edges = [];
+    this.facePoint = null;
 }
 
 /*
@@ -128,16 +136,26 @@ Mesh.prototype.getTriangleIndicesFromQuadVerts = function(verts) {
     }
 
     var triangleOne = [verts[0].index,verts[1].index,verts[2].index];
-    var triangleTwo = [];//[verts[0].index,verts[2].index,verts[3].index];
+    var triangleTwo = [verts[0].index,verts[2].index,verts[3].index];
     return triangleOne.concat(triangleTwo);
 };
 
-Mesh.prototype.facePoint = function(face) {   
-    return averageVerts(face.vertices);
+Mesh.prototype.facePoint = function(face) {
+    if(face.facePoint != null) {
+        return face.facePoint;
+    } 
+
+    face.facePoint = averageVerts(face.vertices);
+    return face.facePoint;
 };
 
 // Warning: assumes 2 faces are avail
 Mesh.prototype.edgePoint = function(edge) {
+
+    if(edge.edgePoint != null) {
+        return edge.edgePoint;
+    }
+
     var vertices = [];
     if(edge.isHoleEdge()) {
        vertices = [edge.beginVertex, edge.endVertex]; 
@@ -148,11 +166,16 @@ Mesh.prototype.edgePoint = function(edge) {
                     edge.endVertex]; 
     }
     
-    return averageVerts(vertices);
+    edge.edgePoint = averageVerts(vertices);
+    return edge.edgePoint;
 };
 
 Mesh.prototype.vertexPoint = function(vertex) {
-    
+
+    if(vertex.vertexPoint != null) {
+        return vertex.vertexPoint;
+    }
+
     var oldVertex = new HE_vert(vertex.x,vertex.y,vertex.z);
     var vertsToAvg = [];
     var faces = [];
@@ -171,6 +194,7 @@ Mesh.prototype.vertexPoint = function(vertex) {
 
     if(vertex.isHoleVertex()) {
         vertsToAvg = [middleEdgeAvgs, oldVertex];
+        vertex.vertexPoint = averageVerts(vertsToAvg);
     } else {
         var facePoints = [];
         for (var i = 0; i < vertex.faces.length; i++) {
@@ -190,10 +214,11 @@ Mesh.prototype.vertexPoint = function(vertex) {
         middleEdgeAvgs.y *= m3;
         middleEdgeAvgs.z *= m3;
 
-        vertsToAvg = [middleEdgeAvgs, oldVertex, avgFacePoint];
+        vertsToSum = [middleEdgeAvgs, oldVertex, avgFacePoint];
+        vertex.vertexPoint = sumVerts(vertsToSum);
     }
     
-    return averageVerts(vertsToAvg);
+    return vertex.vertexPoint;
 };
 
 
@@ -211,6 +236,20 @@ function averageVerts(vertArray) {
     sumX /= vertArray.length;
     sumY /= vertArray.length;
     sumZ /= vertArray.length;
+
+    return new HE_vert(sumX,sumY,sumZ);
+};
+
+function sumVerts(vertArray) {
+    var sumX = 0;
+    var sumY = 0;
+    var sumZ = 0;
+
+    for (var i = vertArray.length - 1; i >= 0; i--) {
+        sumX += vertArray[i].x;
+        sumY += vertArray[i].y;
+        sumZ += vertArray[i].z;
+    };
 
     return new HE_vert(sumX,sumY,sumZ);
 };
@@ -259,8 +298,6 @@ Mesh.prototype.catmull = function() {
     }
 
     mesh.buildMesh(this.vertexListFromHeVerts(newVertices),newIndices);
-    console.log(mesh);
-    console.log(newVertices);
 
     return mesh;    
 };
