@@ -75,7 +75,7 @@ var Program = {
      prg.uPerVertexColor   = gl.getUniformLocation(prg, "uPerVertexColor");
 
 
-     gl.uniform3fv(prg.uLightPosition,    [5, 5, 5]);
+     gl.uniform3fv(prg.uLightPosition,    [0, 0, 5]);
      gl.uniform4fv(prg.uLightAmbient,     [0.0,0.50,0.50,1.0]);
      gl.uniform4fv(prg.uLightDiffuse,     [0.0,0.5,0.5,1.0]); 
     }

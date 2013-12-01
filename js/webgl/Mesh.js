@@ -1,3 +1,4 @@
+
 /**
 *   Mesh
 */
@@ -5,12 +6,8 @@ function Mesh() {
     "use strict";
 
     this.faces = [];
-    this.he_verts = [];
-    this.he_vert_indices = [];
-    this.numberOfIndices = 0;
-    this.numberOfFaces = 0;
-    this.numEdgesInFace = 4;
     this.originalVertices = [];
+    this.numEdgesInFace = 4;
 }
 
 function HE_vert(x, y, z, index) {
@@ -20,51 +17,60 @@ function HE_vert(x, y, z, index) {
     this.y = y;
     this.z = z;
     this.index = index;
-    this.isHoleVertex = true;
+    this.vertexPoint = null;
 
     this.edges = [];
+    this.faces = [];
+
+    this.isHoleVertex = function() {
+        return this.edges.length != this.faces.length;
+    }
+
+    this.print = function() {
+        console.log("(" + x + ', ' + y + ', ' + z + ')');
+    }
 }
 
-function HE_edge() {
+function HE_edge(beginVertex, endVertex) {
     "use strict";
 
-    this.beginVertex = null;
-    this.endVertex = null;
-    this.oppositeEdge = null;
-    this.face = null;
-    this.nextEdge = null;
-    this.isHoleEdge = true;
+    this.beginVertex = beginVertex;
+    this.endVertex = endVertex;
+    this.faces = [];
+    this.edgePoint = null;
+
+    this.isHoleEdge = function() {
+        return this.faces.length == 1;
+    }
 }
 
 function HE_face() {
     "use strict";
 
-    this.edge = null;
-    this.id = -1;
+    this.vertices = [];
+    this.edges = [];
+    this.facePoint = null;
 }
 
 /*
-* Serializes vertex and index list into a mesh by populating half edge datastructure
+* Serializes vertex and index list into a mesh by populating our mesh data structure
 */
 Mesh.prototype.buildMesh = function(vertices,indices) {
-    console.log('Mesh vertices' + vertices);
-    console.log('Mesh indices' + indices);
-    this.he_verts = vertices;
+    this.originalVertices = vertices;
     var edge_indices_map = {};
     var he_verts = [];
-    this.originalVertices = vertices;
 
     // Parse vertices
+    var index = 0;
     for (var i = 0; i < vertices.length; i+=3) {
-        he_verts.push(new HE_vert(vertices[i], vertices[i+1], vertices[i+2], this.numberOfIndices++));
+        he_verts.push(new HE_vert(vertices[i], vertices[i+1], vertices[i+2],index++));
     };
-
-    this.he_verts = he_verts;
 
     // Parse edges and faces
     for (var i = 0; i < indices.length; i+=this.numEdgesInFace) {
 
-        var faceEdges = [];
+        var faceForEdges = new HE_face();
+
         for (var j = 0; j < this.numEdgesInFace; j++) {
             var beginVertexIndex = (i+j);
             var endVertexIndex = i + ((j+1) % this.numEdgesInFace);
@@ -72,84 +78,34 @@ Mesh.prototype.buildMesh = function(vertices,indices) {
             var beginIndex = indices[beginVertexIndex];
             var endIndex = indices[endVertexIndex];
 
-            var edge = null;
-            var oppEdge = null;
+            var beginVertex = he_verts[beginIndex];
+            var endVertex = he_verts[endIndex];
 
-            // If the edge was already created, just grab it
-            if(String([beginIndex,endIndex]) in edge_indices_map) {
-                edge = edge_indices_map[String([beginIndex,endIndex])];
+            var edge = new HE_edge(beginVertex,endVertex);;
 
-            } else { 
-            // Create an edge and its opposite
-                edge = new HE_edge();
-                edge.endVertex = he_verts[endIndex];
-                edge.beginVertex = he_verts[beginIndex];
-                
-                oppEdge = new HE_edge();
-                oppEdge.endVertex = he_verts[beginIndex];
-                oppEdge.beginVertex = he_verts[endIndex];
-
-                edge.oppositeEdge = oppEdge;
-                oppEdge.oppositeEdge = edge;
-
-                edge.endVertex.edges.push(edge.oppositeEdge);
-                edge.oppositeEdge.endVertex.edges.push(edge);
-
-                // If the vertex is encolsed on all sides its not a hole vertex
-                if(edge.endVertex.edges.length == this.numEdgesInFace) {
-                    edge.endVertex.isHoleVertex = false;
-                }
-
-                if(edge.oppositeEdge.endVertex.edges.length == this.numEdgesInFace) {
-                    edge.oppositeEdge.endVertex.isHoleVertex = false;
-                }
-
+            // First time traversing edge, doesn't get called on new edges in other direction ex: 10 - 01 counts as 1 edge for begin and end vertex
+            if(!(String([beginIndex,endIndex]) in edge_indices_map)) {
                 edge_indices_map[String([beginIndex,endIndex])] = edge;
-                edge_indices_map[String([endIndex,beginIndex])] = oppEdge;
+                edge_indices_map[String([endIndex,beginIndex])] = edge;
+                beginVertex.edges.push(edge);
+                endVertex.edges.push(edge);
             }
 
-            faceEdges.push(edge);
+            edge.faces.push(faceForEdges);
+            faceForEdges.edges.push(edge);
+        };
+        
+        // Assign vertices to face
+        for (var j = 0; j < faceForEdges.edges.length; j++) {
+            var curEdgeBeginVertex = faceForEdges.edges[j].beginVertex;
+            faceForEdges.vertices.push(curEdgeBeginVertex);
+            curEdgeBeginVertex.faces.push(faceForEdges);
         };
 
-        // Did our created edges make an enclosing face?
-        if(faceEdges.length == this.numEdgesInFace) {
-            var faceForEdges = new HE_face();
-            faceForEdges.edge = faceEdges[0]; // Assign any edge for the face
-            faceForEdges.id = this.numberOfFaces++;
-            this.faces.push(faceForEdges);
-
-            // Assign next edges and face to all the newly created edges
-            for (var j = 0; j < faceEdges.length; j++) {
-                faceEdges[j].face = faceForEdges;
-                faceEdges[j].nextEdge = faceEdges[(j+1) % faceEdges.length];
-                if(faceEdges[j].oppositeEdge != null && faceEdges[j].oppositeEdge.face != null) {
-                    faceEdges[j].isHoleEdge = false;
-                }
-            };
-        }
-  
+        this.faces.push(faceForEdges);
     };
 
-    //console.log(this.faces);
 };
-
-// Creates a face from vertices specifed in counter-clockwise order
-/*Mesh.prototype.addFaces = function(v1,v2,v3,v4) {
-    var faceForEdges = new HE_face();
-    faceForEdges.edge = faceEdges[0]; // Assign any edge for the face
-    faceForEdges.id = this.numberOfFaces++;
-    this.faces.push(faceForEdges);
-
-    // Assign next edges and face to all the newly created edges
-    for (var j = 0; j < faceEdges.length; j++) {
-        faceEdges[j].face = faceForEdges;
-        faceEdges[j].nextEdge = faceEdges[(j+1) % faceEdges.length];
-        if(faceEdges[j].oppositeEdge != null && faceEdges[j].oppositeEdge.face != null) {
-            faceEdges[j].isHoleEdge = false;
-        }
-    };
-}
-*/
 
 /*
 * Deserializes mesh back into an object that can be added to the scene
@@ -167,132 +123,109 @@ Mesh.prototype.getObjectFromMesh = function(){
 
     for (var i = 0; i < this.faces.length; i++) {
         var face = this.faces[i];
-        var verts = this.getVerticesFromFace(face);
-        var triangleIndices = this.getTriangleIndicesFromQuadVerts(verts);
+        var triangleIndices = this.getTriangleIndicesFromQuadVerts(face.vertices);
         newObject.indices = newObject.indices.concat(triangleIndices);
     };
 
     return newObject;
 };
 
-Mesh.prototype.vertexListFromHeVerts = function(verts) {
-    var list = []
-    for (var i = 0; i < verts.length; i++) {
-        list.push(verts[i].x,verts[i].y,verts[i].z);
-    };
-    return list;
-}
-
+/*
+* Creates two triangles(indices) from a specified quad of vertices
+*/
 Mesh.prototype.getTriangleIndicesFromQuadVerts = function(verts) {
 
     if (!verts.length == 4) {
         throw "Quad not sent in Assertion failed";
     }
 
-    // Split the quad in half diagonally into two triangles
     var triangleOne = [verts[0].index,verts[1].index,verts[2].index];
     var triangleTwo = [verts[0].index,verts[2].index,verts[3].index];
     return triangleOne.concat(triangleTwo);
 };
 
 Mesh.prototype.facePoint = function(face) {
-    var verts = this.getVerticesFromFace(face);
-    
-    return sumVerts(verts, true);
+    if(face.facePoint != null) {
+        return face.facePoint;
+    } 
+
+    face.facePoint = averageVerts(face.vertices);
+    return face.facePoint;
 };
 
-Mesh.prototype.getVerticesFromFace = function(face) {
-    var verts = [];
-    var edge = face.edge;
-
-    for (var i = 0; i < this.numEdgesInFace; i++) {
-        verts.push(edge.endVertex);
-        edge = edge.nextEdge;[i]
-    };
-
-    return verts;
-};
-
-// Warning: assumes 2 faces are avail
 Mesh.prototype.edgePoint = function(edge) {
 
-    var vertices = null;
+    if(edge.edgePoint != null) {
+        return edge.edgePoint;
+    }
 
-    // For hole edges just use middle of edge
-    if(edge.isHoleEdge) {
-       vertices = [edge.endVertex, edge.oppositeEdge.endVertex]; 
+    var vertices = [];
+    if(edge.isHoleEdge()) {
+       vertices = [edge.beginVertex, edge.endVertex]; 
     } else {
-       vertices = [this.facePoint(edge.face),
-                    this.facePoint(edge.oppositeEdge.face),
-                    edge.endVertex,
-                    edge.oppositeEdge.endVertex]; 
+       vertices = [this.facePoint(edge.faces[0]),
+                    this.facePoint(edge.faces[1]),
+                    edge.beginVertex,
+                    edge.endVertex]; 
     }
     
-     
-    
-    return sumVerts(vertices, true);
+    edge.edgePoint = averageVerts(vertices);
+    return edge.edgePoint;
 };
 
 Mesh.prototype.vertexPoint = function(vertex) {
-    
+
+    if(vertex.vertexPoint != null) {
+        return vertex.vertexPoint;
+    }
+
+    var oldVertex = new HE_vert(vertex.x,vertex.y,vertex.z);
     var vertsToAvg = [];
     var faces = [];
-    var edgePoints = []
-    var edgePointAvg;
+    var middleEdgePoints = [];
+    var n = vertex.faces.length;
+    var m1 = (n - 3) / n;
+    var m2 = 1 / n;
+    var m3 = 2 / n;
+
     for (var i = 0; i < vertex.edges.length; i++) {
         var curEdge = vertex.edges[i];
-        edgePoints.push(this.edgePoint(curEdge));
+        middleEdgePoints.push(averageVerts([curEdge.beginVertex,curEdge.endVertex]));
     };
 
-    edgePointAvg = sumVerts(edgePoints, true);
+    var middleEdgeAvgs = averageVerts(middleEdgePoints);
 
-    if(vertex.isHoleVertex) {
-        vertsToAvg = [edgePointAvg, vertex];
+    if(vertex.isHoleVertex()) {
+        vertsToAvg = [middleEdgeAvgs, oldVertex];
+        vertex.vertexPoint = averageVerts(vertsToAvg);
     } else {
-        var faces = this.facesFromVertex(vertex);
         var facePoints = [];
-        for (var i = 0; i < faces.length; i++) {
-            facePoints.push(this.facePoint(faces[i]));
+        for (var i = 0; i < vertex.faces.length; i++) {
+            facePoints.push(this.facePoint(vertex.faces[i]));
         };
-        var avgFacePoint = sumVerts(facePoints, true);
-        vertsToAvg = [edgePointAvg, vertex, avgFacePoint];
+        var avgFacePoint = averageVerts(facePoints);
+
+        oldVertex.x *= m1;
+        oldVertex.y *= m1;
+        oldVertex.z *= m1;
+
+        avgFacePoint.x *= m2;
+        avgFacePoint.y *= m2;
+        avgFacePoint.z *= m2;
+
+        middleEdgeAvgs.x *= m3;
+        middleEdgeAvgs.y *= m3;
+        middleEdgeAvgs.z *= m3;
+
+        vertsToSum = [middleEdgeAvgs, oldVertex, avgFacePoint];
+        vertex.vertexPoint = sumVerts(vertsToSum);
     }
     
-    return sumVerts(vertsToAvg, true);
+    return vertex.vertexPoint;
 };
 
-Mesh.prototype.facesFromVertex = function(vertex) {
-    var edge = vertex.edge;
-    var faceEdge = null;
-    var faces = [];
-    var isEdgeVertex = false;
 
-    for (var i = 0; i < vertex.edges.length; i++) {     
-        var possibleFaces = [vertex.edges[i].face,vertex.edges[i].oppositeEdge.face];
-        var curFace = null;
-        for (var k = 0; k < possibleFaces.length; k++) {
-            curFace = possibleFaces[k];
-        
-            if(curFace) {
-                var inList = false;
-                for (var j = 0; j < faces.length; j++) {
-                    if(faces[j].id == curFace.id) {
-                        inList = true;
-                        break;
-                    }
-                };
-
-                if(inList == false) {
-                    faces.push(curFace);
-                }
-            }
-        };
-    };
-
-    return faces;
-};
-
-function sumVerts(vertArray, averageFlag) {
+function averageVerts(vertArray) {
     var sumX = 0;
     var sumY = 0;
     var sumZ = 0;
@@ -303,25 +236,32 @@ function sumVerts(vertArray, averageFlag) {
         sumZ += vertArray[i].z;
     };
 
-    if(averageFlag === true) {
-        sumX /= vertArray.length;
-        sumY /= vertArray.length;
-        sumZ /= vertArray.length;
-    }
+    sumX /= vertArray.length;
+    sumY /= vertArray.length;
+    sumZ /= vertArray.length;
 
     return new HE_vert(sumX,sumY,sumZ);
 };
 
+function sumVerts(vertArray) {
+    var sumX = 0;
+    var sumY = 0;
+    var sumZ = 0;
 
+    for (var i = vertArray.length - 1; i >= 0; i--) {
+        sumX += vertArray[i].x;
+        sumY += vertArray[i].y;
+        sumZ += vertArray[i].z;
+    };
+
+    return new HE_vert(sumX,sumY,sumZ);
+};
+
+// Generates and returns new mesh after running Catmull-Clark subdivision.
 Mesh.prototype.catmull = function() {
-    //this.facePoint(this.faces[0]);
-    //this.edgePoint(this.faces[0].edge.nextEdge.nextEdge);
-    //this.getObjectFromMesh();
-  //  console.log(this.facesFromVertex(this.faces[0].edge.nextEdge.endVertex));
     var vertex_index_map = {};
 
     var mesh = new Mesh();
-
 
     //First generate vertices:
     var newVertices = [];
@@ -331,43 +271,45 @@ Mesh.prototype.catmull = function() {
     //Then connect the vertices:
     for (var i = 0; i < this.faces.length; i++) {
         var face = this.faces[i];
-        var verts = this.getVerticesFromFace(face);
         var indicesForFace = [];
-        var edge = face.edge;
-        var curIndex = 0;
-        do {
+        for (var k = 0; k < this.numEdgesInFace; k++) {
+            var edge = face.edges[k];
+            var previousEdge = face.edges[(k+this.numEdgesInFace-1) % this.numEdgesInFace];
+
             var firstVertex = this.vertexPoint(edge.beginVertex);
             var secondVertex = this.edgePoint(edge);
             var thirdVertex = this.facePoint(face);
-            var finalVertex = this.edgePoint(edge.nextEdge.nextEdge.nextEdge); // For a quad, goes to final edge
+            var finalVertex = this.edgePoint(previousEdge); // For a quad, goes to final edge
             var quadVertices = [];
             quadVertices.push(firstVertex,secondVertex,thirdVertex,finalVertex);
 
             for (var j = 0; j < quadVertices.length; j++) {
                 var vertex = quadVertices[j];
+                var vertexKey = String([vertex.x,vertex.y,vertex.z])
 
-                if(String([vertex.x,vertex.y,vertex.z]) in vertex_index_map) {
-                    vertex = vertex_index_map[String([vertex.x,vertex.y,vertex.z])] // We can use the same old vertex, so don't add a new vertex
+                if(vertexKey in vertex_index_map) {
+                    vertex = vertex_index_map[vertexKey] // We can use the same old vertex, so don't add a new vertex
                 } else {
-                    vertex_index_map[String([vertex.x,vertex.y,vertex.z])] = vertex; // Save the vertex
+                    vertex_index_map[vertexKey] = vertex; // Save the vertex
                     vertex.index = newCurrentIndex++;
                     newVertices.push(vertex);
                 }
 
                 newIndices.push(vertex.index);
-            };
-
-            edge = edge.nextEdge;
-        } while(edge != face.edge);
-    };
-
-
-    console.log(newIndices);
+            }
+        }
+    }
 
     mesh.buildMesh(this.vertexListFromHeVerts(newVertices),newIndices);
 
-    return mesh;
-    //TODO: Add vertices along with indices by storing edge p
-    console.log(mesh);
-    
+    return mesh;    
+};
+
+// Flattens vertices into an array of coordinates
+Mesh.prototype.vertexListFromHeVerts = function(verts) {
+    var list = []
+    for (var i = 0; i < verts.length; i++) {
+        list.push(verts[i].x,verts[i].y,verts[i].z);
+    };
+    return list;
 };
