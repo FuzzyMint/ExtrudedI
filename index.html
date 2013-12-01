@@ -25,6 +25,8 @@
 <script type='text/javascript' src='js/webgl/Floor.js'></script>
 <script type='text/javascript' src='js/webgl/WebGLApp.js'></script>
 
+
+
 <script id="shader-vs" type="x-shader/x-vertex">
 attribute vec3 aVertexPosition;
 attribute vec3 aVertexNormal;
@@ -55,12 +57,11 @@ void main(void) {
         vec3 N = vec3(uNMatrix * vec4(aVertexNormal, 0.0));  // This is a vector w = 0;
         vec3 L = normalize(-uLightPosition);                 // Given a light position, use the inverse is the direction (to the center of the world)
         L = vec3(uNMatrix*vec4(L,0.0));
-        
-        float lambertTerm = dot(N,-L);
-        if (lambertTerm == 0.0) lambertTerm = 0.01;
-        vec4 Ia = uLightAmbient;
-        vec4 Id = uMaterialDiffuse * uLightDiffuse * lambertTerm;
-        vFinalColor = Ia + Id;
+
+        float vertColorTwo = aVertexPosition.y / 2.3;
+
+        vec4 gradientColor = vec4(vertColorTwo + vertColorTwo,vertColorTwo,0.2,1.0);
+        vFinalColor = gradientColor;
         vFinalColor.a = 1.0;
     }
     
@@ -166,10 +167,10 @@ function load(){
 
     var mesh = new Mesh();
     mesh.buildMesh(ExtrudedI.vertices,ExtrudedI.indices);
-    //mesh.buildMesh(Square.vertices,Square.indices);
+    //mesh.buildMesh(Cube.vertices,Cube.indices);
 
     mesh = mesh.catmull();
-    mesh = mesh.catmull();
+    //mesh = mesh.catmull();
     //mesh = mesh.catmull();
     //mesh = mesh.catmull();
   
