@@ -16,9 +16,16 @@
 <script type='text/javascript' src='js/webgl/Axis.js'></script>
 <script type='text/javascript' src='js/webgl/ExtrudedI.js'></script>
 <script type='text/javascript' src='js/webgl/Triangle.js'></script>
+<script type='text/javascript' src='js/webgl/Cube.js'></script>
+<script type='text/javascript' src='js/webgl/Square.js'></script>
+
+<script type='text/javascript' src='js/webgl/oldMesh.js'></script>
+
 
 <script type='text/javascript' src='js/webgl/Floor.js'></script>
 <script type='text/javascript' src='js/webgl/WebGLApp.js'></script>
+
+
 
 <script id="shader-vs" type="x-shader/x-vertex">
 attribute vec3 aVertexPosition;
@@ -27,7 +34,6 @@ attribute vec4 aVertexColor;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
 uniform mat4 uNMatrix;
-uniform bool uUpdateLight;
 uniform vec3 uLightPosition; 
 uniform vec4 uLightAmbient;  
 uniform vec4 uLightDiffuse;  
@@ -50,15 +56,12 @@ void main(void) {
     else{
         vec3 N = vec3(uNMatrix * vec4(aVertexNormal, 0.0));  // This is a vector w = 0;
         vec3 L = normalize(-uLightPosition);                 // Given a light position, use the inverse is the direction (to the center of the world)
-        if(uUpdateLight){
-            L = vec3(uNMatrix*vec4(L,0.0));   // vector light direction
-        }
-        
-        float lambertTerm = dot(N,-L);
-        if (lambertTerm == 0.0) lambertTerm = 0.01;
-        vec4 Ia = uLightAmbient;
-        vec4 Id = uMaterialDiffuse * uLightDiffuse * lambertTerm;
-        vFinalColor = Ia + Id;
+        L = vec3(uNMatrix*vec4(L,0.0));
+
+        float vertColorTwo = aVertexPosition.y / 2.3;
+
+        vec4 gradientColor = vec4(vertColorTwo + vertColorTwo,vertColorTwo,0.2,1.0);
+        vFinalColor = gradientColor;
         vFinalColor.a = 1.0;
     }
     
@@ -95,6 +98,7 @@ var cubeTexture = null;
 
 var c_width = 720;
 var c_height = 540;
+var numOfCatmullSubdivisions = 0;
 
 /**
 *  Sets up the canvas
@@ -126,7 +130,7 @@ function updateTransforms() {
     
     mat4.identity(mvMatrix);
 
-    mat4.translate(mvMatrix, [0.0, 0.0, -12.0]);
+    mat4.translate(mvMatrix, [-0.0, -0.5, -6.0]);
     
     // Rotate about world's y axis
     mat4.rotateX(mvMatrix, elevation/100);
@@ -160,71 +164,56 @@ function setMatrixUniforms(){
 function load(){
     Floor.build(50,2);
     Axis.build(60);
-   // ExtrudedI.build();
+    ExtrudedI.build();
 
+    var mesh = new Mesh();
+    mesh.buildMesh(ExtrudedI.vertices,ExtrudedI.indices);
     Scene.addObject(Floor);
     Scene.addObject(Axis);
-    Scene.addObject(Triangle);
+    Scene.addObject(mesh.getObjectFromMesh());   
 }
 
 
 /**
-* Main rendering function. Called every 500ms according to WebGLStart function (see below)
+* invoked on every rendering cycle
 */
 function draw() {
     gl.viewport(0, 0, c_width, c_height);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);    
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        
     try{
         
-        updateTransforms();
-        setMatrixUniforms();   
-        
-        // Code for drawing the mesh plane and the axis
+        updateTransforms();   
+        setMatrixUniforms(); 
+                
         for (var i = 0; i < Scene.objects.length; i++){
-                       
+            
             var object = Scene.objects[i];
-
-            if(object.alias == 'teapot') {
-                //console.log('drawing teapot')
-                //mat4.identity(mvMatrix);
-                object.diffuse = [1.0,1.0,1.0,1.0];
-                mat4.translate(mvMatrix, [0.0, 1.5, 0.0]);
-
-                gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, teapotTexture);
-                gl.uniform1i(prg.uSampler, 0);
-
-                gl.activeTexture(gl.TEXTURE1);
-                gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeTexture);
-                gl.uniform1i(prg.uCubeSampler, 1);
-
-                setMatrixUniforms();
-            }
-
-            if(object.alias == 'ExtrudedI') {
-                object.diffuse = [0.0,1.0,1.0,1.0];
-            }
-
+            
             //Setting uniforms
             gl.uniform4fv(prg.uMaterialDiffuse, object.diffuse);
             gl.uniform1i(prg.uWireframe,object.wireframe);
             gl.uniform1i(prg.uPerVertexColor, object.perVertexColor);
             
-            //Setting attributes        
-            gl.enableVertexAttribArray(prg.aVertexPosition);    
+            //Setting attributes
+            gl.enableVertexAttribArray(prg.aVertexPosition);
+            gl.disableVertexAttribArray(prg.aVertexNormal);
+            gl.disableVertexAttribArray(prg.aVertexColor);
+            
             gl.bindBuffer(gl.ARRAY_BUFFER, object.vbo);
             gl.vertexAttribPointer(prg.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(prg.aVertexPosition);
             
             if(!object.wireframe){
-                gl.enableVertexAttribArray(prg.aVertexNormal);
                 gl.bindBuffer(gl.ARRAY_BUFFER, object.nbo);
-                gl.vertexAttribPointer(prg.aVertexNormal,3,gl.FLOAT, false, 0,0);
+                gl.vertexAttribPointer(prg.aVertexNormal, 3, gl.FLOAT, false, 0, 0);
+                gl.enableVertexAttribArray(prg.aVertexNormal);
             }
             
             if (object.perVertexColor){
-                gl.enableVertexAttribArray(prg.aVertexPosition);    
-                gl.bindBuffer(gl.ARRAY_BUFFER, object.vbo);
-                gl.vertexAttribPointer(prg.aVertexPosition, 3, gl.FLOAT, false, 0, 0);
+                gl.bindBuffer(gl.ARRAY_BUFFER, object.cbo);
+                gl.vertexAttribPointer(prg.aVertexColor,4,gl.FLOAT, false, 0,0);
+                gl.enableVertexAttribArray(prg.aVertexColor);
             }
             
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, object.ibo);
@@ -268,11 +257,7 @@ function animate(){
 
 function keydown(ev) {
     var keyCode = ev.keyCode;
-    if (keyCode == 87){
-        pitchVelocity = 0.5;
-    } else if (keyCode == 83){
-        pitchVelocity = -0.5;
-    } else if (keyCode == 65){
+    if (keyCode == 65){
         rollVelocity = 0.5;
     } else if (keyCode == 68){
         rollVelocity = -0.5;
@@ -281,11 +266,29 @@ function keydown(ev) {
 
 function keyup(ev) {
     var keyCode = ev.keyCode;
-    if (keyCode == 87 || keyCode == 83){
-        pitchVelocity = 0.0;
+    if (keyCode == 87) {
+        numOfCatmullSubdivisions++;
+        runCatmull();
+    } else if (keyCode == 83) {
+        numOfCatmullSubdivisions--;
+        runCatmull();
     } else if (keyCode == 65 || keyCode == 68){
         rollVelocity = 0.0;
     }  
+}
+
+function runCatmull() {
+    var mesh = new Mesh();
+    mesh.buildMesh(ExtrudedI.vertices,ExtrudedI.indices);
+
+    for (var i = 0; i < numOfCatmullSubdivisions; i++) {
+        mesh = mesh.catmull();
+    };
+
+    Scene.objects = [];
+    Scene.addObject(Floor);
+    Scene.addObject(Axis);
+    Scene.addObject(mesh.getObjectFromMesh());
 }
 
 
@@ -315,7 +318,8 @@ function runWebGLApp() {
 
 <p>
       Keys:<br> 
-      W or S = Pitch <br>
+      W = Increase number of subdivisions <br>
+      S = Decrease number of subdivisions <br>
       A or D = Roll <br>
 </p>
 

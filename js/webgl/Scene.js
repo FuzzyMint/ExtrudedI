@@ -7,7 +7,7 @@ var Scene = {
         return null;
     },
 
-    loadObject : function(filename,alias,isObjFile){
+    loadObject : function(filename,alias){
         var request = new XMLHttpRequest();
         console.info('Requesting ' + filename);
         request.open("GET",filename);
@@ -18,14 +18,10 @@ var Scene = {
                     console.info(filename + ' does not exist');
                 }
                 else {
-                    if(isObjFile) {
-
-                    } else {
-                        var o = JSON.parse(request.responseText);
-                        o.alias = (alias==null)?'none':alias;
-                        o.remote = true;
-                        Scene.addObject(o);
-                    }
+                    var o = JSON.parse(request.responseText);
+                    o.alias = (alias==null)?'none':alias;
+                    o.remote = true;
+                    Scene.addObject(o);
                 }
             }
         }
